@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Todo;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
-class TodoListTest extends TestCase
+class TodoTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -15,7 +17,8 @@ class TodoListTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->todo = Todo::factory()->create();
+        $user = $this->authUser();
+        $this->todo = $this->createTodo(['user_id' => $user->id]);
     }
 
     /**
@@ -23,27 +26,33 @@ class TodoListTest extends TestCase
      *
      * @return void
      */
-    public function test_store_todo_list()
+    public function test_fetch_all_todos()
     {
+        $this->createTodo();
+
         $response = $this->getJson(route('todos.index'))
             ->assertOk()
             ->json();
+
         $this->assertEquals(1, count($response));
         $this->assertEquals($this->todo->name, $response[0]['name']);
     }
 
-    public function test_fetch_single_todo_list()
+    public function test_fetch_single_todo()
     {
         $response = $this->getJson(route('todos.show', $this->todo->id))
             ->assertOk()
             ->json();
+
         $this->assertEquals($this->todo->name, $response['name']);
     }
 
     public function test_store_new_todo()
     {
         $todo = Todo::factory()->make();
+
         $response = $this->postJson(route('todos.store'), ['name' => $todo->name])->assertCreated()->json();
+
         $this->assertEquals($todo->name, $response['name']);
         $this->assertDatabaseHas('todos', ['name' => $response['name']]);
     }
@@ -59,15 +68,19 @@ class TodoListTest extends TestCase
     public function test_delete_todo()
     {
         $this->deleteJson(route('todos.destroy', $this->todo->id))->assertNoContent();
+
         $this->assertDatabaseMissing('todos', ['id' => $this->todo->id]);
     }
 
     public function test_update_todo()
     {
         $newTodo = Todo::factory()->make();
-        $this->patchJson(route('todos.update', $this->todo->id), [
+
+        $response = $this->patchJson(route('todos.update', $this->todo->id), [
             'name' => $newTodo->name
-        ])->assertOk();
+        ])->assertOk()->json();
+
+        $this->assertEquals($newTodo->name, $response['name']);
         $this->assertDatabaseHas('todos', ['id' => $this->todo->id, 'name' => $newTodo->name]);
     }
 
