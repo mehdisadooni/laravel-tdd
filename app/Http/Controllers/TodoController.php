@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\TodoRequest;
 use App\Models\Todo;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class TodoController extends Controller
@@ -16,7 +16,8 @@ class TodoController extends Controller
      */
     public function index()
     {
-        $todos = Todo::all();
+
+        $todos = Auth::user()->todos;
         return response($todos);
     }
 
@@ -27,8 +28,8 @@ class TodoController extends Controller
      */
     public function store(TodoRequest $request)
     {
-        return Todo::create([
-            'name' => $request->name
+        return Auth::user()->todos()->create([
+            'name' => $request->name,
         ]);
 //        return response($todo, Response::HTTP_CREATED);
     }
@@ -36,7 +37,7 @@ class TodoController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param int $id
+     * @param Todo $todo
      * @return \Illuminate\Http\Response
      */
     public function show(Todo $todo)
@@ -51,7 +52,7 @@ class TodoController extends Controller
      */
     public function update(TodoRequest $request, Todo $todo)
     {
-        return $todo->update([
+        return tap($todo)->update([
             'name' => $request->name
         ]);
     }
